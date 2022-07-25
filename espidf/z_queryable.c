@@ -26,8 +26,8 @@
 #include <esp_log.h>
 #include <nvs_flash.h>
 
-#define ESP_WIFI_SSID      "SSID"
-#define ESP_WIFI_PASS      "PASS"
+#define ESP_WIFI_SSID "SSID"
+#define ESP_WIFI_PASS "PASS"
 #define ESP_MAXIMUM_RETRY  5
 #define WIFI_CONNECTED_BIT BIT0
 
@@ -37,22 +37,30 @@ static int s_retry_count = 0;
 
 #include <zenoh-pico.h>
 
+#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
+#if CLIENT_OR_PEER == 0
+    #define MODE "client"
+    #define PEER "" // If empty, it will scout
+#elif CLIENT_OR_PEER == 1
+    #define MODE "peer"
+    #define PEER "udp/224.0.0.225:7447#iface=en0"
+#else
+    #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
+#endif
+
+#define KEYEXPR "demo/example/zenoh-pico-queryable"
+#define VALUE "[ESPIDF]{ESP32} Queryable from Zenoh-Pico!"
+
 static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
-    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
-    {
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
-    }
-    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
-    {
-        if (s_retry_count < ESP_MAXIMUM_RETRY)
-        {
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        if (s_retry_count < ESP_MAXIMUM_RETRY) {
             esp_wifi_connect();
             s_retry_count++;
         }
-    }
-    else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
-    {
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         xEventGroupSetBits(s_event_group_handler, WIFI_CONNECTED_BIT);
         s_retry_count = 0;
     }
@@ -100,72 +108,22 @@ void wifi_init_sta(void)
             pdFALSE,
             portMAX_DELAY);
 
-    if (bits & WIFI_CONNECTED_BIT)
+    if (bits & WIFI_CONNECTED_BIT) {
         s_is_wifi_connected = true;
+    }
 
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, handler_got_ip));
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, handler_any_id));
     vEventGroupDelete(s_event_group_handler);
 }
 
-void fprintpid(FILE *stream, z_bytes_t pid)
+void query_handler(z_query_t *query, void *ctx)
 {
-    if (pid.val == NULL)
-    {
-        fprintf(stream, "None");
-    }
-    else
-    {
-        fprintf(stream, "Some(");
-        for (unsigned int i = 0; i < pid.len; i++)
-        {
-            fprintf(stream, "%02X", pid.val[i]);
-        }
-        fprintf(stream, ")");
-    }
-}
-
-void fprintwhatami(FILE *stream, unsigned int whatami)
-{
-    if (whatami == ZN_ROUTER)
-    {
-        fprintf(stream, "\"Router\"");
-    }
-    else if (whatami == ZN_PEER)
-    {
-        fprintf(stream, "\"Peer\"");
-    }
-    else
-    {
-        fprintf(stream, "\"Other\"");
-    }
-}
-
-void fprintlocators(FILE *stream, z_str_array_t locs)
-{
-    fprintf(stream, "[");
-    for (unsigned int i = 0; i < locs.len; i++)
-    {
-        fprintf(stream, "\"");
-        fprintf(stream, "%s", locs.val[i]);
-        fprintf(stream, "\"");
-        if (i < locs.len - 1)
-        {
-            fprintf(stream, ", ");
-        }
-    }
-    fprintf(stream, "]");
-}
-
-void fprinthello(FILE *stream, zn_hello_t hello)
-{
-    fprintf(stream, "Hello { pid: ");
-    fprintpid(stream, hello.pid);
-    fprintf(stream, ", whatami: ");
-    fprintwhatami(stream, hello.whatami);
-    fprintf(stream, ", locators: ");
-    fprintlocators(stream, hello.locators);
-    fprintf(stream, " }");
+    (void) (ctx);
+    const char *res = z_keyexpr_to_string(z_query_keyexpr(query));
+    z_bytes_t pred = z_query_value_selector(query);
+    printf(">> [Queryable handler] Received Query '%s%.*s'\n", res, (int)pred.len, pred.start);
+    z_query_reply(query, z_keyexpr(KEYEXPR), (const unsigned char *)VALUE, strlen(VALUE));
 }
 
 void app_main()
@@ -177,31 +135,57 @@ void app_main()
     }
     ESP_ERROR_CHECK(ret);
 
+    // Set WiFi in STA mode and trigger attachment
     printf("Connecting to WiFi...");
     wifi_init_sta();
-    while (!s_is_wifi_connected)
-    {
+    while (!s_is_wifi_connected) {
         printf(".");
         sleep(1);
     }
     printf("OK!\n");
 
-    zn_properties_t *config = zn_config_default();
-
-    printf("Scouting...\n");
-    zn_hello_array_t hellos = zn_scout(ZN_ROUTER, config, 1);
-    if (hellos.len > 0)
-    {
-        for (size_t i = 0; i < hellos.len; i++)
-        {
-            fprinthello(stdout, hellos.val[i]);
-            fprintf(stdout, "\n");
-        }
-
-        zn_hello_array_free(hellos);
+    // Initialize Zenoh Session and other parameters
+    z_owned_config_t config = zp_config_default();
+    zp_config_insert(z_loan(config), Z_CONFIG_MODE_KEY, z_string_make(MODE));
+    if (strcmp(PEER, "") != 0) {
+        zp_config_insert(z_loan(config), Z_CONFIG_PEER_KEY, z_string_make(PEER));
     }
-    else
-    {
-        printf("Did not find any zenoh process.\n");
+
+    // Open Zenoh session
+    printf("Opening Zenoh Session...");
+    z_owned_session_t s = z_open(z_move(config));
+    if (!z_check(s)) {
+        printf("Unable to open session!\n");
+        while(1);
     }
+    printf("OK\n");
+
+    // Start the receive and the session lease loop for zenoh-pico
+    zp_start_read_task(z_loan(s));
+    zp_start_lease_task(z_loan(s));
+
+    // Declare Zenoh queryable
+    printf("Declaring Queryable on %s...", KEYEXPR);
+    z_owned_closure_query_t callback = z_closure(query_handler);
+    z_owned_queryable_t qable = z_declare_queryable(z_loan(s), z_keyexpr(KEYEXPR), z_move(callback), NULL);
+    if (!z_check(qable)) {
+        printf("Unable to declare queryable.\n");
+        while(1);
+    }
+    printf("OK\n");
+    printf("Zenoh setup finished!\n");
+
+    while (1) {
+        sleep(5);
+    }
+
+    printf("Closing Zenoh Session...");
+    z_undeclare_queryable(z_move(qable));
+
+    // Stop the receive and the session lease loop for zenoh-pico
+    zp_stop_read_task(z_loan(s));
+    zp_stop_lease_task(z_loan(s));
+
+    z_close(z_move(s));
+    printf("OK!\n");
 }
