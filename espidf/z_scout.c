@@ -173,7 +173,7 @@ void app_main()
         sleep(5);
         printf("Scouting...\n");
         z_owned_config_t config = zp_config_default();
-        z_owned_hello_array_t hellos = z_scout(Z_ROUTER | Z_PEER, z_move(config), 1000);
+        z_owned_hello_array_t hellos = z_scout(Z_ROUTER | Z_PEER, z_move(config), 1);
         if (z_hello_array_len(z_loan(hellos)) > 0) {
             for (unsigned int i = 0; i < z_hello_array_len(z_loan(hellos)); ++i) {
                 fprinthello(stdout, z_hello_array_get(z_loan(hellos), i));

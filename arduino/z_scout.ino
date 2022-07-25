@@ -96,7 +96,7 @@ void loop()
     z_owned_config_t config = zp_config_default();
 
     Serial.println("Scouting...");
-    z_owned_hello_array_t hellos = z_scout(Z_ROUTER | Z_PEER, z_config_move(&config), 1000);
+    z_owned_hello_array_t hellos = z_scout(Z_ROUTER | Z_PEER, z_config_move(&config), 1);
     if (z_hello_array_len(z_hello_array_loan(&hellos)) > 0) {
         for (unsigned int i = 0; i < z_hello_array_len(z_hello_array_loan(&hellos)); ++i) {
             print_hello(z_hello_array_get(z_hello_array_loan(&hellos), i));
