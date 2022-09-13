@@ -45,7 +45,7 @@ void query_handler(z_query_t *query, void *arg)
     Serial.print("': '");
     Serial.print(VALUE);
     Serial.println("')");
-    z_query_reply(query, z_keyexpr(KEYEXPR), (const unsigned char *)VALUE, strlen(VALUE));
+    z_query_reply(query, z_keyexpr(KEYEXPR), (const unsigned char *)VALUE, strlen(VALUE), NULL);
 }
 
 void setup()
@@ -66,7 +66,7 @@ void setup()
     Serial.println("OK");
 
     // Initialize Zenoh Session and other parameters
-    z_owned_config_t config = zp_config_default();
+    z_owned_config_t config = z_config_default();
     zp_config_insert(z_config_loan(&config), Z_CONFIG_MODE_KEY, z_string_make(MODE));
     if (strcmp(PEER, "") != 0) {
         zp_config_insert(z_config_loan(&config), Z_CONFIG_PEER_KEY, z_string_make(PEER));
@@ -82,8 +82,8 @@ void setup()
     Serial.println("OK");
 
     // Start the receive and the session lease loop for zenoh-pico
-    zp_start_read_task(z_session_loan(&s));
-    zp_start_lease_task(z_session_loan(&s));
+    zp_start_read_task(z_session_loan(&s), NULL);
+    zp_start_lease_task(z_session_loan(&s), NULL);
 
     // Declare Zenoh queryable
     Serial.print("Declaring Queryable on ");

@@ -38,7 +38,7 @@ void query_handler(z_query_t *query, void *ctx)
     const char *res = z_keyexpr_to_string(z_query_keyexpr(query));
     z_bytes_t pred = z_query_value_selector(query);
     printf(" >> [Queryable handler] Received Query '%s%.*s'\n", res, (int)pred.len, pred.start);
-    z_query_reply(query, z_keyexpr(KEYEXPR), (const unsigned char *)VALUE, strlen(VALUE));
+    z_query_reply(query, z_keyexpr(KEYEXPR), (const unsigned char *)VALUE, strlen(VALUE), NULL);
 }
 
 int main(int argc, char **argv)
@@ -48,7 +48,7 @@ int main(int argc, char **argv)
     net.connect();
 
     // Initialize Zenoh Session and other parameters
-    z_owned_config_t config = zp_config_default();
+    z_owned_config_t config = z_config_default();
     zp_config_insert(z_config_loan(&config), Z_CONFIG_MODE_KEY, z_string_make(MODE));
     if (strcmp(PEER, "") != 0) {
         zp_config_insert(z_config_loan(&config), Z_CONFIG_PEER_KEY, z_string_make(PEER));
@@ -64,8 +64,8 @@ int main(int argc, char **argv)
     printf("OK\n");
 
     // Start the receive and the session lease loop for zenoh-pico
-    zp_start_read_task(z_session_loan(&s));
-    zp_start_lease_task(z_session_loan(&s));
+    zp_start_read_task(z_session_loan(&s), NULL);
+    zp_start_lease_task(z_session_loan(&s), NULL);
 
     // Declare Zenoh queryable
     printf("Declaring Queryable on %s...", KEYEXPR);

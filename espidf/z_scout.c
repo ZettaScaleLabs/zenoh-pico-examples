@@ -151,6 +151,22 @@ void fprinthello(FILE *stream, const z_hello_t *hello)
     fprintf(stream, " }");
 }
 
+void callback(z_owned_hello_t hello, void *context) {
+    fprinthello(stdout, hello._value);
+    fprintf(stdout, "\n");
+    (*(int *)context)++;
+}
+
+void drop(void *context) {
+    int count = *(int *)context;
+    free(context);
+    if (!count) {
+        printf("Did not find any zenoh process.\n");
+    } else {
+        printf("Dropping scout results.\n");
+    }
+}
+
 void app_main()
 {
     esp_err_t ret = nvs_flash_init();
@@ -169,20 +185,10 @@ void app_main()
     }
     printf("OK!\n");
 
-    while (1) {
-        sleep(5);
-        printf("Scouting...\n");
-        z_owned_config_t config = zp_config_default();
-        z_owned_hello_array_t hellos = z_scout(Z_ROUTER | Z_PEER, z_move(config), 1);
-        if (z_hello_array_len(z_loan(hellos)) > 0) {
-            for (unsigned int i = 0; i < z_hello_array_len(z_loan(hellos)); ++i) {
-                fprinthello(stdout, z_hello_array_get(z_loan(hellos), i));
-                fprintf(stdout, "\n");
-            }
-        } else {
-            printf("Did not find any zenoh process.\n");
-        }
-
-        z_drop(z_move(hellos));
-    }
+    int *context = malloc(sizeof(int));
+    *context = 0;
+    z_owned_scouting_config_t config = z_scouting_config_default();
+    z_owned_closure_hello_t closure = z_closure_hello(callback, drop, context);
+    printf("Scouting...\n");
+    z_scout(z_scouting_config_move(&config), z_closure_hello_move(&closure));
 }
