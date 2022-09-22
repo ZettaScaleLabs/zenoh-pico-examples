@@ -16,22 +16,22 @@
 #include <WiFi.h>
 
 extern "C" {
-    #include "zenoh-pico.h"
+#include "zenoh-pico.h"
 }
 
 // WiFi-specific parameters
 #define SSID "SSID"
 #define PASS "PASS"
 
-#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
+#define CLIENT_OR_PEER 0  // 0: Client mode; 1: Peer mode
 #if CLIENT_OR_PEER == 0
-    #define MODE "client"
-    #define PEER "" // If empty, it will scout
+#define MODE "client"
+#define PEER ""  // If empty, it will scout
 #elif CLIENT_OR_PEER == 1
-    #define MODE "peer"
-    #define PEER "udp/224.0.0.225:7447#iface=en0"
+#define MODE "peer"
+#define PEER "udp/224.0.0.225:7447#iface=en0"
 #else
-    #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
+#error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
 #define KEYEXPR "demo/example/zenoh-pico-pub"
@@ -40,8 +40,7 @@ extern "C" {
 z_owned_publisher_t pub;
 static int idx = 0;
 
-void setup()
-{
+void setup() {
     // Initialize Serial for debug
     Serial.begin(115200);
     while (!Serial) {
@@ -69,7 +68,9 @@ void setup()
     z_owned_session_t s = z_open(z_config_move(&config));
     if (!z_session_check(&s)) {
         Serial.println("Unable to open session!");
-        while(1);
+        while (1) {
+            ;
+        }
     }
     Serial.println("OK");
 
@@ -84,7 +85,9 @@ void setup()
     pub = z_declare_publisher(z_session_loan(&s), z_keyexpr(KEYEXPR), NULL);
     if (!z_publisher_check(&pub)) {
         Serial.println("Unable to declare publisher for key expression!");
-        while(1);
+        while (1) {
+            ;
+        }
     }
     Serial.println("OK");
     Serial.println("Zenoh setup finished!");
@@ -92,8 +95,7 @@ void setup()
     delay(300);
 }
 
-void loop()
-{
+void loop() {
     char buf[strlen(VALUE) + 8];
     sprintf(buf, "[%4d] %s", idx++, VALUE);
     Serial.print("Writing Data ('");

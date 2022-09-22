@@ -16,29 +16,28 @@
 #include <WiFi.h>
 
 extern "C" {
-    #include "zenoh-pico.h"
+#include "zenoh-pico.h"
 }
 
 // WiFi-specific parameters
 #define SSID "SSID"
 #define PASS "PASS"
 
-#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
+#define CLIENT_OR_PEER 0  // 0: Client mode; 1: Peer mode
 #if CLIENT_OR_PEER == 0
-    #define MODE "client"
-    #define PEER "" // If empty, it will scout
+#define MODE "client"
+#define PEER ""  // If empty, it will scout
 #elif CLIENT_OR_PEER == 1
-    #define MODE "peer"
-    #define PEER "udp/224.0.0.225:7447#iface=en0"
+#define MODE "peer"
+#define PEER "udp/224.0.0.225:7447#iface=en0"
 #else
-    #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
+#error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
 #define KEYEXPR "demo/example/zenoh-pico-queryable"
 #define VALUE "[ARDUINO]{ESP32} Queryable from Zenoh-Pico!"
 
-void query_handler(z_query_t *query, void *arg)
-{
+void query_handler(z_query_t *query, void *arg) {
     const char *res = z_keyexpr_to_string(z_query_keyexpr(query));
     Serial.print(" >> [Queryable handler] Replying Data ('");
     Serial.print(res);
@@ -48,8 +47,7 @@ void query_handler(z_query_t *query, void *arg)
     z_query_reply(query, z_keyexpr(KEYEXPR), (const unsigned char *)VALUE, strlen(VALUE), NULL);
 }
 
-void setup()
-{
+void setup() {
     // Initialize Serial for debug
     Serial.begin(115200);
     while (!Serial) {
@@ -77,7 +75,9 @@ void setup()
     z_owned_session_t s = z_open(z_config_move(&config));
     if (!z_session_check(&s)) {
         Serial.println("Unable to open session!");
-        while(1);
+        while (1) {
+            ;
+        }
     }
     Serial.println("OK");
 
@@ -90,10 +90,13 @@ void setup()
     Serial.print(KEYEXPR);
     Serial.println(" ...");
     z_owned_closure_query_t callback = z_closure_query(query_handler, NULL, NULL);
-    z_owned_queryable_t qable = z_declare_queryable(z_session_loan(&s), z_keyexpr(KEYEXPR), z_closure_query_move(&callback), NULL);
+    z_owned_queryable_t qable =
+        z_declare_queryable(z_session_loan(&s), z_keyexpr(KEYEXPR), z_closure_query_move(&callback), NULL);
     if (!z_queryable_check(&qable)) {
         Serial.println("Unable to declare queryable.");
-        while(1);
+        while (1) {
+            ;
+        }
     }
     Serial.println("OK");
     Serial.println("Zenoh setup finished!");
@@ -101,7 +104,4 @@ void setup()
     delay(300);
 }
 
-void loop()
-{
-    delay(5000);
-}
+void loop() { delay(5000); }

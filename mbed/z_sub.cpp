@@ -11,34 +11,32 @@
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 
-#include <mbed.h>
 #include <EthernetInterface.h>
+#include <mbed.h>
 
 extern "C" {
-    #include <zenoh-pico.h>
+#include <zenoh-pico.h>
 }
 
-#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
+#define CLIENT_OR_PEER 0  // 0: Client mode; 1: Peer mode
 #if CLIENT_OR_PEER == 0
-    #define MODE "client"
-    #define PEER "" // If empty, it will scout
+#define MODE "client"
+#define PEER ""  // If empty, it will scout
 #elif CLIENT_OR_PEER == 1
-    #define MODE "peer"
-    #define PEER "udp/224.0.0.225:7447#iface=en0"
+#define MODE "peer"
+#define PEER "udp/224.0.0.225:7447#iface=en0"
 #else
-    #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
+#error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
 #define KEYEXPR "demo/example/**"
 
-void data_handler(const z_sample_t *sample, void *arg)
-{
-    printf(" >> [Subscriber handler] Received ('%s': '%.*s')\n",
-           z_keyexpr_to_string(sample->keyexpr), (int)sample->payload.len, sample->payload.start);
+void data_handler(const z_sample_t *sample, void *arg) {
+    printf(" >> [Subscriber handler] Received ('%s': '%.*s')\n", z_keyexpr_to_string(sample->keyexpr),
+           (int)sample->payload.len, sample->payload.start);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     EthernetInterface net;
     net.set_network("192.168.11.2", "255.255.255.0", "192.168.11.1");
     net.connect();
@@ -55,7 +53,7 @@ int main(int argc, char **argv)
     z_owned_session_t s = z_open(z_config_move(&config));
     if (!z_session_check(&s)) {
         printf("Unable to open session!\n");
-        while(1);
+        exit(-1);
     }
     printf("OK\n");
 
@@ -65,7 +63,8 @@ int main(int argc, char **argv)
 
     printf("Declaring Subscriber on '%s'...", KEYEXPR);
     z_owned_closure_sample_t callback = z_closure_sample(data_handler, NULL, NULL);
-    z_owned_subscriber_t sub = z_declare_subscriber(z_session_loan(&s), z_keyexpr(KEYEXPR), z_closure_sample_move(&callback), NULL);
+    z_owned_subscriber_t sub =
+        z_declare_subscriber(z_session_loan(&s), z_keyexpr(KEYEXPR), z_closure_sample_move(&callback), NULL);
     if (!z_subscriber_check(&sub)) {
         printf("Unable to declare subscriber.\n");
         exit(-1);

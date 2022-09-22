@@ -16,15 +16,14 @@
 #include <WiFi.h>
 
 extern "C" {
-    #include "zenoh-pico.h"
+#include "zenoh-pico.h"
 }
 
 // WiFi-specific parameters
 #define SSID "SSID"
 #define PASS "PASS"
 
-void print_pid(z_bytes_t pid)
-{
+void print_pid(z_bytes_t pid) {
     if (pid.start == NULL) {
         Serial.print("None");
     } else {
@@ -36,19 +35,17 @@ void print_pid(z_bytes_t pid)
     }
 }
 
-void print_whatami(unsigned int whatami)
-{
-    if (whatami == Z_ROUTER) {
+void print_whatami(unsigned int whatami) {
+    if (whatami == Z_WHATAMI_ROUTER) {
         Serial.print("'Router'");
-    } else if (whatami == Z_PEER) {
+    } else if (whatami == Z_WHATAMI_PEER) {
         Serial.print("'Peer'");
     } else {
         Serial.print("'Other'");
     }
 }
 
-void print_locators(z_str_array_t *locs)
-{
+void print_locators(z_str_array_t *locs) {
     Serial.print("[");
     size_t len = z_str_array_len(locs);
     for (unsigned int i = 0; i < len; i++) {
@@ -62,8 +59,7 @@ void print_locators(z_str_array_t *locs)
     Serial.print("]");
 }
 
-void print_hello(z_hello_t *hello)
-{
+void print_hello(z_hello_t *hello) {
     Serial.print(" >> Hello { pid: ");
     print_pid(hello->pid);
     Serial.print(", whatami: ");
@@ -73,8 +69,8 @@ void print_hello(z_hello_t *hello)
     Serial.println(" }");
 }
 
-void callback(z_owned_hello_t hello, void *context) {
-    fprinthello(stdout, hello._value);
+void callback(z_owned_hello_t *hello, void *context) {
+    fprinthello(stdout, z_hello_loan(hello));
     fprintf(stdout, "\n");
     (*(int *)context)++;
 }
@@ -89,8 +85,7 @@ void drop(void *context) {
     }
 }
 
-void setup()
-{
+void setup() {
     // Initialize Serial for debug
     Serial.begin(115200);
     while (!Serial) {
@@ -107,8 +102,7 @@ void setup()
     Serial.println("OK");
 }
 
-void loop()
-{
+void loop() {
     int *context = malloc(sizeof(int));
     *context = 0;
     z_owned_scouting_config_t config = z_scouting_config_default();

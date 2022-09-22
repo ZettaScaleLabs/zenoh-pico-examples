@@ -15,25 +15,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
 #include <zenoh-pico.h>
 
-#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
+#define CLIENT_OR_PEER 0  // 0: Client mode; 1: Peer mode
 #if CLIENT_OR_PEER == 0
-    #define MODE "client"
-    #define PEER "" // If empty, it will scout
+#define MODE "client"
+#define PEER ""  // If empty, it will scout
 #elif CLIENT_OR_PEER == 1
-    #define MODE "peer"
-    #define PEER "udp/224.0.0.225:7447#iface=en0"
+#define MODE "peer"
+#define PEER "udp/224.0.0.225:7447#iface=en0"
 #else
-    #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
+#error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
 #define KEYEXPR "demo/example/zenoh-pico-pub"
 #define VALUE "[Unix]{Linux} Pub from Zenoh-Pico!"
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     // Initialize Zenoh Session and other parameters
     z_owned_config_t config = z_config_default();
     zp_config_insert(z_loan(config), Z_CONFIG_MODE_KEY, z_string_make(MODE));
@@ -46,7 +44,7 @@ int main(int argc, char **argv)
     z_owned_session_t s = z_open(z_move(config));
     if (!z_check(s)) {
         printf("Unable to open session!\n");
-        while(1);
+        exit(-1);
     }
     printf("OK\n");
 

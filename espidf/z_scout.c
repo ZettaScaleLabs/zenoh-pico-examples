@@ -11,23 +11,22 @@
 // Contributors:
 //   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <freertos/event_groups.h>
-#include <esp_system.h>
-#include <esp_wifi.h>
 #include <esp_event.h>
 #include <esp_log.h>
+#include <esp_system.h>
+#include <esp_wifi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/event_groups.h>
+#include <freertos/task.h>
 #include <nvs_flash.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #define ESP_WIFI_SSID "ATOPlay"
 #define ESP_WIFI_PASS "A70L@bsR0ck5!!"
-#define ESP_MAXIMUM_RETRY  5
+#define ESP_MAXIMUM_RETRY 5
 #define WIFI_CONNECTED_BIT BIT0
 
 static bool s_is_wifi_connected = false;
@@ -36,8 +35,7 @@ static int s_retry_count = 0;
 
 #include <zenoh-pico.h>
 
-static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
-{
+static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
@@ -51,8 +49,7 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
     }
 }
 
-void wifi_init_sta(void)
-{
+void wifi_init_sta(void) {
     s_event_group_handler = xEventGroupCreate();
 
     ESP_ERROR_CHECK(esp_netif_init());
@@ -65,33 +62,21 @@ void wifi_init_sta(void)
 
     esp_event_handler_instance_t handler_any_id;
     esp_event_handler_instance_t handler_got_ip;
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-                                                        ESP_EVENT_ANY_ID,
-                                                        &event_handler,
-                                                        NULL,
-                                                        &handler_any_id));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-                                                        IP_EVENT_STA_GOT_IP,
-                                                        &event_handler,
-                                                        NULL,
-                                                        &handler_got_ip));
+    ESP_ERROR_CHECK(
+        esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL, &handler_any_id));
+    ESP_ERROR_CHECK(
+        esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL, &handler_got_ip));
 
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = ESP_WIFI_SSID,
-            .password = ESP_WIFI_PASS,
-        }
-    };
+    wifi_config_t wifi_config = {.sta = {
+                                     .ssid = ESP_WIFI_SSID,
+                                     .password = ESP_WIFI_PASS,
+                                 }};
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    EventBits_t bits = xEventGroupWaitBits(s_event_group_handler,
-            WIFI_CONNECTED_BIT,
-            pdFALSE,
-            pdFALSE,
-            portMAX_DELAY);
+    EventBits_t bits = xEventGroupWaitBits(s_event_group_handler, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
 
     if (bits & WIFI_CONNECTED_BIT) {
         s_is_wifi_connected = true;
@@ -102,8 +87,7 @@ void wifi_init_sta(void)
     vEventGroupDelete(s_event_group_handler);
 }
 
-void fprintpid(FILE *stream, z_bytes_t pid)
-{
+void fprintpid(FILE *stream, z_bytes_t pid) {
     if (pid.start == NULL) {
         fprintf(stream, "None");
     } else {
@@ -115,19 +99,17 @@ void fprintpid(FILE *stream, z_bytes_t pid)
     }
 }
 
-void fprintwhatami(FILE *stream, unsigned int whatami)
-{
-    if (whatami == Z_ROUTER) {
+void fprintwhatami(FILE *stream, unsigned int whatami) {
+    if (whatami == Z_WHATAMI_ROUTER) {
         fprintf(stream, "\"Router\"");
-    } else if (whatami == Z_PEER) {
+    } else if (whatami == Z_WHATAMI_PEER) {
         fprintf(stream, "\"Peer\"");
     } else {
         fprintf(stream, "\"Other\"");
     }
 }
 
-void fprintlocators(FILE *stream, const z_str_array_t *locs)
-{
+void fprintlocators(FILE *stream, const z_str_array_t *locs) {
     fprintf(stream, "[");
     for (unsigned int i = 0; i < z_str_array_len(locs); i++) {
         fprintf(stream, "\"");
@@ -140,8 +122,7 @@ void fprintlocators(FILE *stream, const z_str_array_t *locs)
     fprintf(stream, "]");
 }
 
-void fprinthello(FILE *stream, const z_hello_t *hello)
-{
+void fprinthello(FILE *stream, const z_hello_t *hello) {
     fprintf(stream, "Hello { pid: ");
     fprintpid(stream, hello->pid);
     fprintf(stream, ", whatami: ");
@@ -151,8 +132,8 @@ void fprinthello(FILE *stream, const z_hello_t *hello)
     fprintf(stream, " }");
 }
 
-void callback(z_owned_hello_t hello, void *context) {
-    fprinthello(stdout, hello._value);
+void callback(z_owned_hello_t *hello, void *context) {
+    fprinthello(stdout, z_hello_loan(hello));
     fprintf(stdout, "\n");
     (*(int *)context)++;
 }
@@ -167,12 +148,11 @@ void drop(void *context) {
     }
 }
 
-void app_main()
-{
+void app_main() {
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ret = nvs_flash_init();
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
 

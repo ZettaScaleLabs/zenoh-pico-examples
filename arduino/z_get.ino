@@ -16,41 +16,39 @@
 #include <WiFi.h>
 
 extern "C" {
-    #include "zenoh-pico.h"
+#include "zenoh-pico.h"
 }
 
 // WiFi-specific parameters
 #define SSID "SSID"
 #define PASS "PASS"
 
-#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
+#define CLIENT_OR_PEER 0  // 0: Client mode; 1: Peer mode
 #if CLIENT_OR_PEER == 0
-    #define MODE "client"
-    #define PEER "" // If empty, it will scout
+#define MODE "client"
+#define PEER ""  // If empty, it will scout
 #elif CLIENT_OR_PEER == 1
-    #define MODE "peer"
-    #define PEER "udp/224.0.0.225:7447#iface=en0"
+#define MODE "peer"
+#define PEER "udp/224.0.0.225:7447#iface=en0"
 #else
-    #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
+#error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
 #define KEYEXPR "demo/example/**"
 
 z_owned_session_t s;
 
-void reply_dropper(void *ctx)
-{
-    (void) (ctx);
+void reply_dropper(void *ctx) {
+    (void)(ctx);
     Serial.println(" >> Received query final notification");
 }
 
-void reply_handler(z_owned_reply_t oreply, void *ctx)
-{
-    (void) (ctx);
-    if (z_reply_is_ok(&oreply)) {
-        z_sample_t sample = z_reply_ok(&oreply);
+void reply_handler(z_owned_reply_t *oreply, void *ctx) {
+    (void)(ctx);
+    if (z_reply_is_ok(oreply)) {
+        z_sample_t sample = z_reply_ok(oreply);
         const char *key = z_keyexpr_to_string(sample.keyexpr);
-        std::string val((const char*)sample.payload.start, sample.payload.len);
+        std::string val((const char *)sample.payload.start, sample.payload.len);
         Serial.print(" >> [Get listener] Received (");
         Serial.print(key);
         Serial.print(", ");
@@ -61,8 +59,7 @@ void reply_handler(z_owned_reply_t oreply, void *ctx)
     }
 }
 
-void setup()
-{
+void setup() {
     // Initialize Serial for debug
     Serial.begin(115200);
     while (!Serial) {
@@ -90,7 +87,9 @@ void setup()
     s = z_open(z_config_move(&config));
     if (!z_session_check(&s)) {
         Serial.println("Unable to open session!");
-        while(1);
+        while (1) {
+            ;
+        }
     }
     Serial.println("OK");
 
@@ -103,8 +102,7 @@ void setup()
     delay(300);
 }
 
-void loop()
-{
+void loop() {
     delay(5000);
 
     Serial.print("Sending Query ");

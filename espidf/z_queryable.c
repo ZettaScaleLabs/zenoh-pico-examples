@@ -12,23 +12,22 @@
  *   ZettaScale zenoh team, <zenoh@zettascale.tech>
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <freertos/event_groups.h>
-#include <esp_system.h>
-#include <esp_wifi.h>
 #include <esp_event.h>
 #include <esp_log.h>
+#include <esp_system.h>
+#include <esp_wifi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/event_groups.h>
+#include <freertos/task.h>
 #include <nvs_flash.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #define ESP_WIFI_SSID "SSID"
 #define ESP_WIFI_PASS "PASS"
-#define ESP_MAXIMUM_RETRY  5
+#define ESP_MAXIMUM_RETRY 5
 #define WIFI_CONNECTED_BIT BIT0
 
 static bool s_is_wifi_connected = false;
@@ -37,22 +36,21 @@ static int s_retry_count = 0;
 
 #include <zenoh-pico.h>
 
-#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
+#define CLIENT_OR_PEER 0  // 0: Client mode; 1: Peer mode
 #if CLIENT_OR_PEER == 0
-    #define MODE "client"
-    #define PEER "" // If empty, it will scout
+#define MODE "client"
+#define PEER ""  // If empty, it will scout
 #elif CLIENT_OR_PEER == 1
-    #define MODE "peer"
-    #define PEER "udp/224.0.0.225:7447#iface=en0"
+#define MODE "peer"
+#define PEER "udp/224.0.0.225:7447#iface=en0"
 #else
-    #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
+#error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
 #define KEYEXPR "demo/example/zenoh-pico-queryable"
 #define VALUE "[ESPIDF]{ESP32} Queryable from Zenoh-Pico!"
 
-static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
-{
+static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
@@ -66,8 +64,7 @@ static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_
     }
 }
 
-void wifi_init_sta(void)
-{
+void wifi_init_sta(void) {
     s_event_group_handler = xEventGroupCreate();
 
     ESP_ERROR_CHECK(esp_netif_init());
@@ -80,33 +77,21 @@ void wifi_init_sta(void)
 
     esp_event_handler_instance_t handler_any_id;
     esp_event_handler_instance_t handler_got_ip;
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-                                                        ESP_EVENT_ANY_ID,
-                                                        &event_handler,
-                                                        NULL,
-                                                        &handler_any_id));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-                                                        IP_EVENT_STA_GOT_IP,
-                                                        &event_handler,
-                                                        NULL,
-                                                        &handler_got_ip));
+    ESP_ERROR_CHECK(
+        esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL, &handler_any_id));
+    ESP_ERROR_CHECK(
+        esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL, &handler_got_ip));
 
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = ESP_WIFI_SSID,
-            .password = ESP_WIFI_PASS,
-        }
-    };
+    wifi_config_t wifi_config = {.sta = {
+                                     .ssid = ESP_WIFI_SSID,
+                                     .password = ESP_WIFI_PASS,
+                                 }};
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    EventBits_t bits = xEventGroupWaitBits(s_event_group_handler,
-            WIFI_CONNECTED_BIT,
-            pdFALSE,
-            pdFALSE,
-            portMAX_DELAY);
+    EventBits_t bits = xEventGroupWaitBits(s_event_group_handler, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
 
     if (bits & WIFI_CONNECTED_BIT) {
         s_is_wifi_connected = true;
@@ -117,21 +102,19 @@ void wifi_init_sta(void)
     vEventGroupDelete(s_event_group_handler);
 }
 
-void query_handler(z_query_t *query, void *ctx)
-{
-    (void) (ctx);
+void query_handler(z_query_t *query, void *ctx) {
+    (void)(ctx);
     const char *res = z_keyexpr_to_string(z_query_keyexpr(query));
-    z_bytes_t pred = z_query_value_selector(query);
+    z_bytes_t pred = z_query_parameters(query);
     printf(">> [Queryable handler] Received Query '%s%.*s'\n", res, (int)pred.len, pred.start);
     z_query_reply(query, z_keyexpr(KEYEXPR), (const unsigned char *)VALUE, strlen(VALUE), NULL);
 }
 
-void app_main()
-{
+void app_main() {
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ret = nvs_flash_init();
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
 
@@ -156,7 +139,7 @@ void app_main()
     z_owned_session_t s = z_open(z_move(config));
     if (!z_check(s)) {
         printf("Unable to open session!\n");
-        while(1);
+        exit(-1);
     }
     printf("OK\n");
 
@@ -170,7 +153,7 @@ void app_main()
     z_owned_queryable_t qable = z_declare_queryable(z_loan(s), z_keyexpr(KEYEXPR), z_move(callback), NULL);
     if (!z_check(qable)) {
         printf("Unable to declare queryable.\n");
-        while(1);
+        exit(-1);
     }
     printf("OK\n");
     printf("Zenoh setup finished!\n");

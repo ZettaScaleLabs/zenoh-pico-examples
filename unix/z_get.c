@@ -15,31 +15,26 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
 #include <zenoh-pico.h>
 
-#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
+#define CLIENT_OR_PEER 0  // 0: Client mode; 1: Peer mode
 #if CLIENT_OR_PEER == 0
-    #define MODE "client"
-    #define PEER "" // If empty, it will scout
+#define MODE "client"
+#define PEER ""  // If empty, it will scout
 #elif CLIENT_OR_PEER == 1
-    #define MODE "peer"
-    #define PEER "udp/224.0.0.225:7447#iface=en0"
+#define MODE "peer"
+#define PEER "udp/224.0.0.225:7447#iface=en0"
 #else
-    #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
+#error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
 #define KEYEXPR "demo/example/**"
 
-void reply_dropper(void *ctx)
-{
-    printf(" >> Received query final notification\n");
-}
+void reply_dropper(void *ctx) { printf(" >> Received query final notification\n"); }
 
-void reply_handler(z_owned_reply_t oreply, void *ctx)
-{
-    if (z_reply_is_ok(&oreply)) {
-        z_sample_t sample = z_reply_ok(&oreply);
+void reply_handler(z_owned_reply_t *oreply, void *ctx) {
+    if (z_reply_is_ok(oreply)) {
+        z_sample_t sample = z_reply_ok(oreply);
         const char *key = z_keyexpr_to_string(sample.keyexpr);
         printf(" >> Received ('%s': '%.*s')\n", key, (int)sample.payload.len, sample.payload.start);
     } else {
@@ -47,8 +42,7 @@ void reply_handler(z_owned_reply_t oreply, void *ctx)
     }
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     // Initialize Zenoh Session and other parameters
     z_owned_config_t config = z_config_default();
     zp_config_insert(z_loan(config), Z_CONFIG_MODE_KEY, z_string_make(MODE));
@@ -61,7 +55,7 @@ int main(int argc, char **argv)
     z_owned_session_t s = z_open(z_move(config));
     if (!z_check(s)) {
         printf("Unable to open session!\n");
-        while(1);
+        exit(-1);
     }
     printf("OK\n");
 

@@ -16,32 +16,31 @@
 #include <WiFi.h>
 
 extern "C" {
-    #include "zenoh-pico.h"
+#include "zenoh-pico.h"
 }
 
 // WiFi-specific parameters
 #define SSID "SSID"
 #define PASS "PASS"
 
-#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
+#define CLIENT_OR_PEER 0  // 0: Client mode; 1: Peer mode
 #if CLIENT_OR_PEER == 0
-    #define MODE "client"
-    #define PEER "" // If empty, it will scout
+#define MODE "client"
+#define PEER ""  // If empty, it will scout
 #elif CLIENT_OR_PEER == 1
-    #define MODE "peer"
-    #define PEER "udp/224.0.0.225:7447#iface=en0"
+#define MODE "peer"
+#define PEER "udp/224.0.0.225:7447#iface=en0"
 #else
-    #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
+#error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
 #define KEYEXPR "demo/example/**"
 
 z_owned_pull_subscriber_t sub;
 
-void data_handler(const z_sample_t *sample, void *arg)
-{
+void data_handler(const z_sample_t *sample, void *arg) {
     const char *key = z_keyexpr_to_string(sample->keyexpr);
-    std::string val((const char*)sample->payload.start, sample->payload.len);
+    std::string val((const char *)sample->payload.start, sample->payload.len);
 
     Serial.print(" >> [Subscription listener] Received (");
     Serial.print(key);
@@ -50,8 +49,7 @@ void data_handler(const z_sample_t *sample, void *arg)
     Serial.println(")");
 }
 
-void setup()
-{
+void setup() {
     // Initialize Serial for debug
     Serial.begin(115200);
     while (!Serial) {
@@ -79,7 +77,9 @@ void setup()
     z_owned_session_t s = z_open(z_config_move(&config));
     if (!z_session_check(&s)) {
         Serial.println("Unable to open session!");
-        while(1);
+        while (1) {
+            ;
+        }
     }
     Serial.println("OK");
 
@@ -95,7 +95,9 @@ void setup()
     sub = z_declare_pull_subscriber(z_session_loan(&s), z_keyexpr(KEYEXPR), z_closure_sample_move(&callback), NULL);
     if (!z_pull_subscriber_check(&sub)) {
         Serial.println("Unable to declare subscriber.");
-        while(1);
+        while (1) {
+            ;
+        }
     }
     Serial.println("OK");
     Serial.println("Zenoh setup finished!");
@@ -103,8 +105,7 @@ void setup()
     delay(300);
 }
 
-void loop()
-{
+void loop() {
     delay(5000);
-    z_pull(z_pull_subscriber_loan(&sub));
+    z_subscriber_pull(z_pull_subscriber_loan(&sub));
 }

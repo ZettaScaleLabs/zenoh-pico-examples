@@ -14,34 +14,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <zenoh-pico.h>
 
-#define CLIENT_OR_PEER 0 // 0: Client mode; 1: Peer mode
+#define CLIENT_OR_PEER 0  // 0: Client mode; 1: Peer mode
 #if CLIENT_OR_PEER == 0
-    #define MODE "client"
-    #define PEER "" // If empty, it will scout
+#define MODE "client"
+#define PEER ""  // If empty, it will scout
 #elif CLIENT_OR_PEER == 1
-    #define MODE "peer"
-    #define PEER "udp/224.0.0.225:7447#iface=en0"
+#define MODE "peer"
+#define PEER "udp/224.0.0.225:7447#iface=en0"
 #else
-    #error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
+#error "Unknown Zenoh operation mode. Check CLIENT_OR_PEER value."
 #endif
 
 #define KEYEXPR "demo/example/zenoh-pico-queryable"
 #define VALUE "[STSTM32]{nucleo-F767ZI} Queryable from Zenoh-Pico!"
 
-void query_handler(z_query_t *query, void *ctx)
-{
-    (void) (ctx);
+void query_handler(z_query_t *query, void *ctx) {
+    (void)(ctx);
     const char *res = z_keyexpr_to_string(z_query_keyexpr(query));
-    z_bytes_t pred = z_query_value_selector(query);
+    z_bytes_t pred = z_query_parameters(query);
     printf(" >> [Queryable handler] Received Query '%s%.*s'\n", res, (int)pred.len, pred.start);
     z_query_reply(query, z_keyexpr(KEYEXPR), (const unsigned char *)VALUE, strlen(VALUE), NULL);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     sleep(5);
 
     // Initialize Zenoh Session and other parameters
@@ -56,7 +53,7 @@ int main(int argc, char **argv)
     z_owned_session_t s = z_open(z_move(config));
     if (!z_check(s)) {
         printf("Unable to open session!\n");
-        while(1);
+        exit(-1);
     }
     printf("OK\n");
 
@@ -70,7 +67,7 @@ int main(int argc, char **argv)
     z_owned_queryable_t qable = z_declare_queryable(z_loan(s), z_keyexpr(KEYEXPR), z_move(callback), NULL);
     if (!z_check(qable)) {
         printf("Unable to declare queryable.\n");
-        while(1);
+        exit(-1);
     }
     printf("OK\n");
     printf("Zenoh setup finished!\n");
