@@ -84,7 +84,7 @@ int main(void) {
     net.set_network("192.168.11.2", "255.255.255.0", "192.168.11.1");
     net.connect();
 
-    int *context = malloc(sizeof(int));
+    int *context = (int *)malloc(sizeof(int));
     *context = 0;
     z_owned_scouting_config_t config = z_scouting_config_default();
     z_owned_closure_hello_t closure = z_closure_hello(callback, drop, context);

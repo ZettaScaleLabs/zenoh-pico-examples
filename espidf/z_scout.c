@@ -165,7 +165,7 @@ void app_main() {
     }
     printf("OK!\n");
 
-    int *context = malloc(sizeof(int));
+    int *context = (int *)malloc(sizeof(int));
     *context = 0;
     z_owned_scouting_config_t config = z_scouting_config_default();
     z_owned_closure_hello_t closure = z_closure_hello(callback, drop, context);

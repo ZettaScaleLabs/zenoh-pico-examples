@@ -23,7 +23,7 @@ extern "C" {
 #define SSID "SSID"
 #define PASS "PASS"
 
-void print_pid(z_bytes_t pid) {
+void fprintpid(z_bytes_t pid) {
     if (pid.start == NULL) {
         Serial.print("None");
     } else {
@@ -35,7 +35,7 @@ void print_pid(z_bytes_t pid) {
     }
 }
 
-void print_whatami(unsigned int whatami) {
+void fprintwhatami(unsigned int whatami) {
     if (whatami == Z_WHATAMI_ROUTER) {
         Serial.print("'Router'");
     } else if (whatami == Z_WHATAMI_PEER) {
@@ -45,7 +45,7 @@ void print_whatami(unsigned int whatami) {
     }
 }
 
-void print_locators(z_str_array_t *locs) {
+void fprintlocators(z_str_array_t *locs) {
     Serial.print("[");
     size_t len = z_str_array_len(locs);
     for (unsigned int i = 0; i < len; i++) {
@@ -59,19 +59,19 @@ void print_locators(z_str_array_t *locs) {
     Serial.print("]");
 }
 
-void print_hello(z_hello_t *hello) {
+void fprinthello(z_hello_t *hello) {
     Serial.print(" >> Hello { pid: ");
-    print_pid(hello->pid);
+    fprintpid(hello->pid);
     Serial.print(", whatami: ");
-    print_whatami(hello->whatami);
+    fprintwhatami(hello->whatami);
     Serial.print(", locators: ");
-    print_locators(&hello->locators);
+    fprintlocators(&hello->locators);
     Serial.println(" }");
 }
 
 void callback(z_owned_hello_t *hello, void *context) {
-    fprinthello(stdout, z_hello_loan(hello));
-    fprintf(stdout, "\n");
+    fprinthello(z_hello_loan(hello));
+    Serial.println("");
     (*(int *)context)++;
 }
 
@@ -103,7 +103,7 @@ void setup() {
 }
 
 void loop() {
-    int *context = malloc(sizeof(int));
+    int *context = (int *)malloc(sizeof(int));
     *context = 0;
     z_owned_scouting_config_t config = z_scouting_config_default();
     z_owned_closure_hello_t closure = z_closure_hello(callback, drop, context);
